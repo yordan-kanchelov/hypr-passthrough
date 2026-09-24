@@ -14,9 +14,13 @@ Works with Hyprland's Lua config (0.55+), on [Omarchy](https://omarchy.org) or p
 ### As an Omarchy plugin
 
 ```bash
-omarchy plugin add https://github.com/yordan-kanchelov/hypr-passthrough.git
-omarchy plugin enable yordan-kanchelov.passthrough
+omarchy plugin add https://github.com/yordan-kanchelov/hypr-passthrough.git --enable
 ```
+
+Use `--enable` rather than a separate `omarchy plugin enable` right after `add`: the shell
+rescans plugins in the background, so an immediate `enable` can fail with "plugin is not
+known". Disable or remove it with `omarchy plugin disable yordan-kanchelov.passthrough` or
+`omarchy plugin remove yordan-kanchelov.passthrough`.
 
 The plugin loads `passthrough.lua` into Hyprland with the default options, reloads it
 after every Hyprland config reload, and unloads it when you disable the plugin. To change
