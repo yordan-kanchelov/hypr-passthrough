@@ -7,8 +7,19 @@ switches to an almost-empty submap, so every key combo goes to the app. `SUPER +
 opens Spotlight on the Mac you're controlling through RustDesk instead of your launcher.
 Leave fullscreen or focus another window, and your bindings come back.
 
-Works with Hyprland's Lua config (0.55+), on [Omarchy](https://omarchy.org) or plain Hyprland.
-No other dependencies: the plugin only uses `hyprctl`, which ships with Hyprland.
+Works out of the box with RustDesk, Moonlight, Parsec, Remmina, virt-viewer and Looking
+Glass. You can add any other app from the bar.
+
+**`SUPER + SHIFT + ESCAPE`** pauses passthrough for the focused window, so your own
+bindings work again. Press it again to resume.
+
+## Requirements
+
+- Hyprland 0.55 or newer, configured with Lua (`hyprland.lua`)
+- Omarchy, for the bar widget and one-command install. On plain Hyprland, use the
+  [Lua module](#as-a-lua-module).
+
+Nothing else: the plugin only talks to Hyprland through `hyprctl`, which ships with it.
 
 ## Install
 
@@ -19,65 +30,105 @@ omarchy plugin add https://github.com/yordan-kanchelov/hypr-passthrough.git --en
 omarchy restart shell
 ```
 
-Restart the shell after installing and after each `omarchy plugin update
-yordan-kanchelov.passthrough`: the shell caches plugin code, so new files and changes
-only load on a fresh start.
+That's it: passthrough is active and the icon is on your bar.
 
-Use `--enable` rather than a separate `omarchy plugin enable` right after `add`: the shell
-rescans plugins in the background, so an immediate `enable` can fail with "plugin is not
-known". Disable or remove it with `omarchy plugin disable yordan-kanchelov.passthrough` or
-`omarchy plugin remove yordan-kanchelov.passthrough`.
+- Use `--enable` rather than running `omarchy plugin enable` right after `add`. The
+  shell registers new plugins in the background, so an immediate `enable` can fail
+  with "plugin is not known".
+- Restart the shell after installing and after each update. It caches plugin code, so
+  changes only load on a fresh start:
 
-The plugin loads `passthrough.lua` into Hyprland with the default options, reloads it
-after every Hyprland config reload, and unloads it when you disable the plugin. To change
-the options, use the Lua install below instead. If both are set up, your
-`hyprland.lua` copy wins and the plugin leaves it alone.
+  ```bash
+  omarchy plugin update yordan-kanchelov.passthrough
+  omarchy restart shell
+  ```
 
-### As a Lua module (any Hyprland with Lua config)
+### As a Lua module
 
-```bash
-curl -fsSL -o ~/.config/hypr/passthrough.lua \
-  https://raw.githubusercontent.com/yordan-kanchelov/hypr-passthrough/main/passthrough.lua
-```
+Use this on plain Hyprland, or on Omarchy if you want to change the
+[options](#options).
 
-Then add this line to `~/.config/hypr/hyprland.lua`, after your other bindings:
+1. Download `passthrough.lua` from a fixed commit, not from a branch that can change
+   later:
+   [passthrough.lua @ 3475edf](https://raw.githubusercontent.com/yordan-kanchelov/hypr-passthrough/3475edf955c3229b3cd730defb4faa3f55354347/passthrough.lua).
+   Save it as `~/.config/hypr/passthrough.lua`.
+2. Check that the file is intact before Hyprland loads it:
 
-```lua
-require("hypr.passthrough").setup()
-```
+   ```bash
+   echo "26a2b80edc8021888e01c511eb92eac6de8ead80ef9b2072eb108ba98f184aeb  $HOME/.config/hypr/passthrough.lua" | sha256sum -c
+   ```
+
+   It should print `OK`. If it doesn't, delete the file and download it again.
+3. Add this line to `~/.config/hypr/hyprland.lua`, after your other bindings:
+
+   ```lua
+   require("hypr.passthrough").setup()
+   ```
 
 On plain Hyprland, make sure `~/.config/?.lua` is on `package.path` (Omarchy already
 does this), or put the file wherever your config's `require` can find it.
 
-To remove it, delete that `require` line and `~/.config/hypr/passthrough.lua`.
+This copy never updates itself. To update, repeat steps 1 and 2 with the commit link
+and checksum from the latest version of this README.
+
+If you also have the Omarchy plugin enabled, your `hyprland.lua` copy wins: the plugin
+leaves it alone and only adds the apps you manage from the bar.
+
+## Remove
+
+Omarchy plugin:
+
+```bash
+omarchy plugin disable yordan-kanchelov.passthrough   # turn it off, keep it installed
+omarchy plugin remove yordan-kanchelov.passthrough    # uninstall
+```
+
+Disabling or removing the plugin unloads passthrough from Hyprland straight away.
+Your app list stays in `~/.config/hypr-passthrough/`; delete that folder too if you
+don't plan to reinstall.
+
+Lua module: delete the `require` line from `hyprland.lua` and delete
+`~/.config/hypr/passthrough.lua`.
 
 ## Usage
 
-| Situation | Shortcuts go to |
+| Focused window | Shortcuts go to |
 | --- | --- |
-| Matching app, fullscreen, focused | The app (remote machine) |
-| Anything else | Hyprland, as usual |
+| A passthrough app, fullscreen | The app (and the remote machine) |
+| A passthrough app, paused with `SUPER + SHIFT + ESCAPE` | Hyprland |
+| Anything else | Hyprland |
 
-**`SUPER + SHIFT + ESCAPE`** pauses passthrough for the focused window, so your normal
-bindings work again (for example, `SUPER + F` to leave fullscreen). Press it again to resume.
+To leave a fullscreen remote session, press `SUPER + SHIFT + ESCAPE`, then your usual
+`SUPER + F`.
 
-If you ever get stuck: `hyprctl dispatch 'hl.dsp.submap("reset")'`
+If you ever get stuck in the passthrough submap, run this from a terminal or another TTY:
+
+```bash
+hyprctl dispatch 'hl.dsp.submap("reset")'
+```
 
 ## Bar widget
 
-The plugin adds an icon to the right side of your bar. It shows a keyboard while idle and
-a highlighted remote-desktop icon while shortcuts are being passed through. Click it to
-see which apps passthrough applies to:
+The icon shows a keyboard while idle and a highlighted remote-desktop icon while
+shortcuts are being passed through. Click it to manage which apps get passthrough:
 
-- **Open apps**: every app with an open window, whether or not it is fullscreen, with the
-  focused one first. Click **Add** to pass shortcuts through to it as well; apps already
-  covered show **Listed**.
+- **Open apps**: every app with an open window, focused one first. Click **Add** to
+  include it. Apps already covered show **Listed**.
 - **Your apps**: the apps you added. Click the cross to remove one.
-- **Built in**: the default apps (RustDesk, Moonlight, Parsec, Remmina, virt-viewer, Looking
-  Glass). They are all on by default; use a switch to opt out of one. Only the ones
-  installed on your machine, or currently open, are shown.
+- **Built in**: the default apps. They are all on; use the switch to turn one off.
+  Only the ones installed on your machine, or currently open, are shown.
 
-Both lists live in `~/.config/hypr-passthrough/apps.json`:
+The icon sits on the right of the bar. To move it:
+
+```bash
+omarchy bar move yordan-kanchelov.passthrough --section left
+```
+
+### Files
+
+The plugin writes one file, `~/.config/hypr-passthrough/apps.json`, and doesn't touch
+your Hyprland or Omarchy config. You can also edit it by hand; changes apply straight
+away.
 
 ```json
 {
@@ -86,12 +137,18 @@ Both lists live in `~/.config/hypr-passthrough/apps.json`:
 }
 ```
 
-`apps` holds exact window classes (case-insensitive) and `disabled` holds built-in
-patterns exactly as listed under Options. You can also edit the file by hand; changes
-apply straight away. While the plugin is enabled, both apply on top of a Lua install's
-`apps` too. Move the icon with `omarchy bar move yordan-kanchelov.passthrough --section left`.
+- `apps`: extra window classes to pass through (exact match, case-insensitive).
+- `disabled`: built-in patterns to turn off, written exactly as in the `apps` default
+  under [Options](#options).
+
+These apply on top of a Lua module's `apps` too, while the Omarchy plugin is enabled.
+
+Find a window's class with `hyprctl activewindow -j | jq -r .class`.
 
 ## Options
+
+Options are for the [Lua module](#as-a-lua-module); the Omarchy plugin uses the
+defaults below. Pass only the ones you want to change:
 
 ```lua
 require("hypr.passthrough").setup({
@@ -111,16 +168,24 @@ require("hypr.passthrough").setup({
 })
 ```
 
-Find a window's class with `hyprctl activewindow -j | jq -r .class`.
+## How it works
 
-## Notes
+- `passthrough.lua` listens for focus and fullscreen changes. When the focused window
+  matches, it switches Hyprland to a submap that only binds the pause key; when it
+  stops matching, it switches back.
+- It only takes over from the default submap, so your own submaps (resize modes, etc.)
+  are left alone.
+- The Omarchy plugin loads `passthrough.lua` into Hyprland with `hyprctl eval`, loads it
+  again after every Hyprland config reload, and unloads it when you disable the plugin.
+- To remove a loaded copy without a config reload:
+  `hyprctl eval 'hypr_passthrough.teardown()'`
 
-- Passthrough only takes over from the default submap, so your own submaps (resize
-  modes, etc.) are left alone.
-- Hyprland only stops handling the keys. The app still has to forward them: in RustDesk,
-  use the *Map* or *Translate* keyboard mode so `SUPER` arrives as `Cmd` on a Mac.
-- `hyprctl eval 'hypr_passthrough.teardown()'` removes it without a config reload.
+## Tips
+
+- Hyprland only stops handling the keys; the app still has to forward them. In
+  RustDesk, use the *Map* or *Translate* keyboard mode so `SUPER` arrives as `Cmd` on
+  a Mac.
 
 ## License
 
-MIT
+[MIT](LICENSE)
