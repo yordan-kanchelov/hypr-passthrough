@@ -73,11 +73,21 @@ see which apps passthrough applies to:
   focused one first. Click **Add** to pass shortcuts through to it as well; apps already
   covered show **Listed**.
 - **Your apps**: the apps you added. Click the cross to remove one.
-- **Built in**: the default app list.
+- **Built in**: the default apps (RustDesk, Moonlight, Parsec, Remmina, virt-viewer, Looking
+  Glass). They are all on by default; use a switch to opt out of one.
 
-Added apps are exact window classes (case-insensitive), saved in
-`~/.config/hypr-passthrough/apps.json`. You can also edit that file by hand; changes
-apply straight away. While the plugin is enabled, they apply on top of a Lua install's
+Both lists live in `~/.config/hypr-passthrough/apps.json`:
+
+```json
+{
+  "apps": ["org.example.viewer"],
+  "disabled": ["moonlight"]
+}
+```
+
+`apps` holds exact window classes (case-insensitive) and `disabled` holds built-in
+patterns exactly as listed under Options. You can also edit the file by hand; changes
+apply straight away. While the plugin is enabled, both apply on top of a Lua install's
 `apps` too. Move the icon with `omarchy bar move yordan-kanchelov.passthrough --section left`.
 
 ## Options
