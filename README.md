@@ -8,6 +8,7 @@ opens Spotlight on the Mac you're controlling through RustDesk instead of your l
 Leave fullscreen or focus another window, and your bindings come back.
 
 Works with Hyprland's Lua config (0.55+), on [Omarchy](https://omarchy.org) or plain Hyprland.
+No other dependencies: the plugin only uses `hyprctl`, which ships with Hyprland.
 
 ## Install
 
@@ -42,6 +43,8 @@ require("hypr.passthrough").setup()
 
 On plain Hyprland, make sure `~/.config/?.lua` is on `package.path` (Omarchy already
 does this), or put the file wherever your config's `require` can find it.
+
+To remove it, delete that `require` line and `~/.config/hypr/passthrough.lua`.
 
 ## Usage
 
