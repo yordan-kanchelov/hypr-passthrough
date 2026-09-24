@@ -83,9 +83,7 @@ Find a window's class with `hyprctl activewindow -j | jq -r .class`.
   modes, etc.) are left alone.
 - Hyprland only stops handling the keys. The app still has to forward them: in RustDesk,
   use the *Map* or *Translate* keyboard mode so `SUPER` arrives as `Cmd` on a Mac.
-- `hyprctl eval 'hypr_passthrough.teardown()'` removes it without a config reload. It is
-  written to avoid a Hyprland 0.56 bug where touching an expired keybind handle crashes
-  the compositor.
+- `hyprctl eval 'hypr_passthrough.teardown()'` removes it without a config reload.
 
 ## License
 
