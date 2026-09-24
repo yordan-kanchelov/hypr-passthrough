@@ -101,16 +101,34 @@ Lua module: delete the `require` line from `hyprland.lua` and delete
 To leave a fullscreen remote session, press `SUPER + SHIFT + ESCAPE`, then your usual
 `SUPER + F`.
 
-If you ever get stuck in the passthrough submap, run this from a terminal or another TTY:
+### Supported apps
 
-```bash
-hyprctl dispatch 'hl.dsp.submap("reset")'
-```
+| App | Matched window class |
+| --- | --- |
+| RustDesk | contains `rustdesk` |
+| Moonlight | contains `moonlight` |
+| Parsec | contains `parsec` |
+| Remmina | contains `remmina` |
+| virt-viewer / SPICE | `remote-viewer` or `virt-viewer` |
+| Looking Glass | `looking-glass-client` |
+
+Anything else can be added from the [bar widget](#bar-widget) or `apps.json`.
+
+Hyprland only stops handling the keys; the app still has to forward them. In RustDesk,
+use the *Map* or *Translate* keyboard mode so `SUPER` arrives as `Cmd` on a Mac.
 
 ## Bar widget
 
 The icon shows a keyboard while idle and a highlighted remote-desktop icon while
-shortcuts are being passed through. Click it to manage which apps get passthrough:
+shortcuts are being passed through.
+
+| Action | Result |
+| --- | --- |
+| Hover the icon | Shows which app is receiving your shortcuts |
+| Click the icon | Opens or closes the app list |
+| `SUPER + SHIFT + ESCAPE` | Pauses or resumes passthrough for the focused window |
+
+The app list has three parts:
 
 - **Open apps**: every app with an open window, focused one first. Click **Add** to
   include it. Apps already covered show **Listed**.
@@ -180,11 +198,52 @@ require("hypr.passthrough").setup({
 - To remove a loaded copy without a config reload:
   `hyprctl eval 'hypr_passthrough.teardown()'`
 
-## Tips
+## Limitations
 
-- Hyprland only stops handling the keys; the app still has to forward them. In
-  RustDesk, use the *Map* or *Translate* keyboard mode so `SUPER` arrives as `Cmd` on
-  a Mac.
+- **All or nothing.** While passthrough is on, every shortcut except the pause key goes
+  to the app. There is no list of shortcuts to keep on your desktop.
+- **Forwarding is up to the app.** If the app doesn't send `SUPER` to the remote side,
+  the key goes nowhere.
+- **Omarchy plugin uses the defaults.** Changing `when`, the pause key or the submap
+  name needs the [Lua module](#as-a-lua-module).
+- **Lua config only.** `hyprland.conf` setups aren't supported.
+
+## Troubleshooting
+
+**`SUPER` still opens my launcher.** Check the focused window:
+
+```bash
+hyprctl activewindow -j | jq -r '.class, .fullscreen'
+```
+
+The class must match a [supported app](#supported-apps) or one you added, and with the
+default settings `fullscreen` must be `2`. `1` means maximized, which only counts with
+`when = "maximized"` in the Lua module. Also check that passthrough isn't paused for that
+window: press `SUPER + SHIFT + ESCAPE` once.
+
+**Keys reach the app but not the remote machine.** The app isn't forwarding them.
+Check its keyboard or input settings (RustDesk: *Map* or *Translate* mode).
+
+**I'm stuck with no shortcuts.** Press `SUPER + SHIFT + ESCAPE`. If that doesn't help,
+run this from a terminal or another TTY:
+
+```bash
+hyprctl dispatch 'hl.dsp.submap("reset")'
+```
+
+**`omarchy plugin enable` says "plugin is not known".** The shell hasn't finished
+registering the plugin. Wait a moment and try again, or install with `--enable`.
+
+**The icon is missing or an update didn't apply.** Run `omarchy restart shell`.
+
+### Reporting bugs
+
+[Open an issue](https://github.com/yordan-kanchelov/hypr-passthrough/issues) with:
+
+- `hyprctl version`
+- the output of `hyprctl activewindow -j | jq -r '.class, .fullscreen'` and
+  `hyprctl submap` while the problem happens
+- whether you use the Omarchy plugin, the Lua module, or both
 
 ## License
 
