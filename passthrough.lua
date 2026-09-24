@@ -33,6 +33,7 @@ M.defaults = {
 
   -- Pauses passthrough for the focused window, and resumes it when pressed
   -- again. While paused, your normal bindings (e.g. SUPER + F) work again.
+  -- Required: it is your way out, and Hyprland needs it to create the submap.
   toggle_key = "SUPER + SHIFT + ESCAPE",
 
   -- Name of the submap used while passing keys through.
@@ -112,9 +113,15 @@ local function toggle()
   sync()
 end
 
+local toggle_binds = {}
+local subscriptions = {}
+
+-- Only one copy may be active per Hyprland Lua state. The state is rebuilt on
+-- every config reload, so this global is too. It lets the Omarchy plugin, which
+-- loads this file with `hyprctl eval`, find and remove a copy it loaded.
 function M.setup(options)
-  if config then
-    return M
+  if _G.hypr_passthrough then
+    return _G.hypr_passthrough
   end
 
   config = {}
@@ -124,31 +131,65 @@ function M.setup(options)
   for key, value in pairs(options or {}) do
     config[key] = value
   end
+  assert(type(config.toggle_key) == "string", "hypr-passthrough: toggle_key must be a key combo")
 
-  if config.toggle_key then
-    local description = { description = "Toggle shortcut passthrough" }
+  -- The toggle is bound inside the submap, which also registers the submap
+  -- (Hyprland will not enter one without bindings), and again globally.
+  local description = { description = "Toggle shortcut passthrough" }
+  hl.define_submap(config.submap, function()
+    table.insert(toggle_binds, hl.bind(config.toggle_key, toggle, description))
+  end)
+  table.insert(toggle_binds, hl.bind(config.toggle_key, toggle, description))
 
-    hl.define_submap(config.submap, function()
-      hl.bind(config.toggle_key, toggle, description)
-    end)
-    hl.bind(config.toggle_key, toggle, description)
-  else
-    hl.define_submap(config.submap, function() end)
-  end
-
-  hl.on("window.active", sync)
-  hl.on("window.fullscreen", sync)
+  table.insert(subscriptions, hl.on("window.active", sync))
+  table.insert(subscriptions, hl.on("window.fullscreen", sync))
   -- Forget paused state here rather than on window.destroy: by then the window
   -- has expired and its address is nil.
-  hl.on("window.close", function(window)
-    if window and window.address then
-      paused[window.address] = nil
-    end
-    sync()
-  end)
-  hl.on("config.reloaded", sync)
+  table.insert(
+    subscriptions,
+    hl.on("window.close", function(window)
+      if window and window.address then
+        paused[window.address] = nil
+      end
+      sync()
+    end)
+  )
+  table.insert(subscriptions, hl.on("config.reloaded", sync))
+
+  _G.hypr_passthrough = M
+  sync()
 
   return M
+end
+
+-- Undo setup(): leave the submap and drop the binding and event handlers.
+function M.teardown()
+  if _G.hypr_passthrough ~= M then
+    return
+  end
+
+  if hl.get_current_submap() == config.submap then
+    hl.dispatch(hl.dsp.submap("reset"))
+  end
+
+  -- In Hyprland 0.56, unbinding one of two same-key bindings expires the other
+  -- too, and so does a user's own hl.unbind() of the key. Touching an expired
+  -- keybind handle in any way but tostring() segfaults the compositor.
+  for _, bind in ipairs(toggle_binds) do
+    if not tostring(bind):find("(expired)", 1, true) then
+      bind:unbind()
+    end
+  end
+
+  for _, subscription in ipairs(subscriptions) do
+    subscription:remove()
+  end
+
+  toggle_binds = {}
+  subscriptions = {}
+  paused = {}
+  config = nil
+  _G.hypr_passthrough = nil
 end
 
 return M
