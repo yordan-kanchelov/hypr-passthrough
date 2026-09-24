@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Controls as QQC
+import Quickshell
 import Quickshell.Wayland
 import qs.Commons
 import qs.Ui
@@ -61,6 +62,25 @@ BarWidget {
   function toggle() {
     if (opened) close()
     else open()
+  }
+
+  // Built-in patterns whose app is installed (a desktop entry's id, window class or
+  // command matches) or currently open. The rest are hidden from the menu.
+  readonly property var installedPatterns: {
+    var names = []
+    var entries = DesktopEntries.applications ? DesktopEntries.applications.values : []
+    for (var i = 0; i < entries.length; i++) {
+      var entry = entries[i]
+      names.push(String(entry.id || ""), String(entry.startupClass || ""))
+      if (entry.command && entry.command.length > 0) names.push(String(entry.command[0]).split("/").pop())
+    }
+    for (var j = 0; j < openApps.length; j++) names.push(openApps[j].appClass)
+
+    var svc = service
+    if (!svc) return []
+    return appPatterns.filter(function(pattern) {
+      return names.some(function(name) { return name !== "" && svc.patternMatches(pattern, name) })
+    })
   }
 
   // "^remote%-viewer$" -> "remote-viewer"
@@ -261,15 +281,17 @@ BarWidget {
         }
 
         Text {
-          visible: root.appPatterns.length === 0
-          text: "Loading..."
+          visible: root.appPatterns.length === 0 || root.installedPatterns.length === 0
+          width: parent.width
+          wrapMode: Text.WordWrap
+          text: root.appPatterns.length === 0 ? "Loading..." : "None of the built-in apps are installed."
           color: root.mutedColor
           font.family: root.fontFamily
           font.pixelSize: Style.font.caption
         }
 
         Repeater {
-          model: root.appPatterns
+          model: root.installedPatterns
 
           delegate: Item {
             id: builtInRow
@@ -300,6 +322,17 @@ BarWidget {
               onToggled: if (root.service) root.service.setBuiltInEnabled(builtInRow.modelData, !builtInRow.enabledApp)
             }
           }
+        }
+
+        Text {
+          readonly property int hidden: root.appPatterns.length - root.installedPatterns.length
+          visible: root.installedPatterns.length > 0 && hidden > 0
+          width: parent.width
+          wrapMode: Text.WordWrap
+          text: hidden + (hidden === 1 ? " built-in app isn't installed, so it is hidden." : " built-in apps aren't installed, so they are hidden.")
+          color: root.mutedColor
+          font.family: root.fontFamily
+          font.pixelSize: Style.font.caption
         }
       }
     }

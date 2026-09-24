@@ -86,14 +86,20 @@ Item {
     if (isAdded(cls)) return true
 
     for (var i = 0; i < appPatterns.length; i++) {
-      if (!isBuiltInEnabled(appPatterns[i])) continue
-      try {
-        // The built-in patterns only use ^, $ and %-escapes, which map directly.
-        if (new RegExp(appPatterns[i].replace(/%(.)/g, "\\$1")).test(cls)) return true
-      } catch (e) {}
+      if (isBuiltInEnabled(appPatterns[i]) && patternMatches(appPatterns[i], cls)) return true
     }
 
     return false
+  }
+
+  // Match a lowercased name against one of the module's Lua patterns. The
+  // built-in patterns only use ^, $ and %-escapes, which map directly.
+  function patternMatches(pattern, name) {
+    try {
+      return new RegExp(String(pattern).replace(/%(.)/g, "\\$1")).test(String(name || "").toLowerCase())
+    } catch (e) {
+      return false
+    }
   }
 
   function isAdded(windowClass) {
