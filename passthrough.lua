@@ -45,6 +45,9 @@ M.defaults = {
 
 local config
 local paused = {} -- window address -> true
+-- Lowercased window classes added at runtime (e.g. from the Omarchy bar widget),
+-- matched exactly and on top of config.apps.
+local extra_classes = {}
 
 local function matches(window)
   if window == nil or window.class == nil then
@@ -52,6 +55,10 @@ local function matches(window)
   end
 
   local class = window.class:lower()
+  if extra_classes[class] then
+    return true
+  end
+
   for _, pattern in ipairs(config.apps) do
     if class:find(pattern) then
       return true
@@ -162,6 +169,30 @@ function M.setup(options)
   return M
 end
 
+-- Replace the runtime list of extra window classes (exact, case-insensitive).
+function M.set_extra_apps(classes)
+  extra_classes = {}
+  for _, class in ipairs(classes or {}) do
+    if type(class) == "string" and class ~= "" then
+      extra_classes[class:lower()] = true
+    end
+  end
+
+  if config then
+    sync()
+  end
+end
+
+-- The configured app patterns, one per line, and the submap name (both read by
+-- the Omarchy bar widget).
+function M.app_patterns()
+  return table.concat(config and config.apps or {}, "\n")
+end
+
+function M.submap_name()
+  return config and config.submap or M.defaults.submap
+end
+
 -- Undo setup(): leave the submap and drop the binding and event handlers.
 function M.teardown()
   if _G.hypr_passthrough ~= M then
@@ -188,6 +219,7 @@ function M.teardown()
   toggle_binds = {}
   subscriptions = {}
   paused = {}
+  extra_classes = {}
   config = nil
   _G.hypr_passthrough = nil
 end
