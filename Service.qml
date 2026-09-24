@@ -125,6 +125,10 @@ Item {
       root.extraApps = root.parseApps(text())
       root.sync()
     }
+    // Create the file, so it is watched and hand edits apply straight away.
+    onLoadFailed: function(error) {
+      if (error === FileViewError.FileNotFound) root.save()
+    }
   }
 
   Process {
