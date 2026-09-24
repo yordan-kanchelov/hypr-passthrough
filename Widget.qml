@@ -254,15 +254,45 @@ BarWidget {
       }
 
       Text {
-        width: parent.width
-        wrapMode: Text.WordWrap
-        textFormat: Text.PlainText
-        text: root.appPatterns.length > 0
-          ? root.appPatterns.map(root.patternLabel).join(", ")
-          : "Loading..."
+        visible: root.appPatterns.length === 0
+        text: "Loading..."
         color: root.mutedColor
         font.family: root.fontFamily
         font.pixelSize: Style.font.caption
+      }
+
+      Repeater {
+        model: root.appPatterns
+
+        delegate: Item {
+          id: builtInRow
+          required property var modelData
+          readonly property bool enabledApp: root.service ? root.service.isBuiltInEnabled(modelData) : true
+          width: column.width
+          implicitHeight: builtInSwitch.implicitHeight
+
+          Text {
+            anchors.left: parent.left
+            anchors.right: builtInSwitch.left
+            anchors.rightMargin: Style.space(8)
+            anchors.verticalCenter: parent.verticalCenter
+            elide: Text.ElideRight
+            textFormat: Text.PlainText
+            text: root.patternLabel(builtInRow.modelData)
+            color: builtInRow.enabledApp ? root.textColor : root.mutedColor
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.bodySmall
+          }
+
+          ToggleSwitch {
+            id: builtInSwitch
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            checked: builtInRow.enabledApp
+            foreground: root.textColor
+            onToggled: if (root.service) root.service.setBuiltInEnabled(builtInRow.modelData, !builtInRow.enabledApp)
+          }
+        }
       }
     }
   }

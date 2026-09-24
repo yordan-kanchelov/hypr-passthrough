@@ -48,6 +48,8 @@ local paused = {} -- window address -> true
 -- Lowercased window classes added at runtime (e.g. from the Omarchy bar widget),
 -- matched exactly and on top of config.apps.
 local extra_classes = {}
+-- Patterns from config.apps switched off at runtime (e.g. from the bar widget).
+local disabled_patterns = {}
 
 local function matches(window)
   if window == nil or window.class == nil then
@@ -60,7 +62,7 @@ local function matches(window)
   end
 
   for _, pattern in ipairs(config.apps) do
-    if class:find(pattern) then
+    if not disabled_patterns[pattern] and class:find(pattern) then
       return true
     end
   end
@@ -183,6 +185,20 @@ function M.set_extra_apps(classes)
   end
 end
 
+-- Switch off some of the configured app patterns (given exactly as in `apps`).
+function M.set_disabled_apps(patterns)
+  disabled_patterns = {}
+  for _, pattern in ipairs(patterns or {}) do
+    if type(pattern) == "string" then
+      disabled_patterns[pattern] = true
+    end
+  end
+
+  if config then
+    sync()
+  end
+end
+
 -- The configured app patterns, one per line, and the submap name (both read by
 -- the Omarchy bar widget).
 function M.app_patterns()
@@ -220,6 +236,7 @@ function M.teardown()
   subscriptions = {}
   paused = {}
   extra_classes = {}
+  disabled_patterns = {}
   config = nil
   _G.hypr_passthrough = nil
 end
