@@ -24,6 +24,8 @@ Item {
 
   // Window classes added from the bar widget, saved in apps.json.
   property var extraApps: []
+  // Built-in app patterns switched off from the bar widget, saved in apps.json.
+  property var disabledApps: []
   // Lua patterns configured in the module (the built-in list unless
   // hyprland.lua passes its own `apps`).
   property var appPatterns: []
@@ -41,14 +43,26 @@ Item {
 
   readonly property string applyCode:
     "if hypr_passthrough and hypr_passthrough.set_extra_apps then hypr_passthrough.set_extra_apps({"
-    + extraApps.map(luaString).join(", ") + "}) end"
+    + extraApps.map(luaString).join(", ") + "}) end "
+    + "if hypr_passthrough and hypr_passthrough.set_disabled_apps then hypr_passthrough.set_disabled_apps({"
+    + disabledApps.map(luaString).join(", ") + "}) end"
+
+  // Tags the copy this service instance loads. A shell restart starts the new
+  // instance before the old one's detached unload runs, so each instance only
+  // unloads its own copy, and replaces a copy left by an older instance (which
+  // also picks up an updated passthrough.lua). A copy required from
+  // hyprland.lua has no tag and is never replaced or unloaded.
+  readonly property string owner: "omarchy-plugin:" + Date.now() + ":" + Math.floor(Math.random() * 1e9)
 
   readonly property string loadCode:
-    "if not hypr_passthrough then dofile(" + luaString(modulePath) + ").setup().loaded_by = 'omarchy-plugin' end "
+    "local p = hypr_passthrough "
+    + "if p and type(p.loaded_by) == 'string' and p.loaded_by ~= " + luaString(owner)
+    + " and p.loaded_by:find('^omarchy%-plugin') then p.teardown() end "
+    + "if not hypr_passthrough then dofile(" + luaString(modulePath) + ").setup().loaded_by = " + luaString(owner) + " end "
     + applyCode
 
   readonly property string unloadCode:
-    "if hypr_passthrough and hypr_passthrough.loaded_by == 'omarchy-plugin' then hypr_passthrough.teardown() end"
+    "if hypr_passthrough and hypr_passthrough.loaded_by == " + luaString(owner) + " then hypr_passthrough.teardown() end"
 
   // Starts with a marker line: hyprctl prints "unknown request" for an empty result.
   readonly property string statusCode:
@@ -72,6 +86,7 @@ Item {
     if (isAdded(cls)) return true
 
     for (var i = 0; i < appPatterns.length; i++) {
+      if (!isBuiltInEnabled(appPatterns[i])) continue
       try {
         // The built-in patterns only use ^, $ and %-escapes, which map directly.
         if (new RegExp(appPatterns[i].replace(/%(.)/g, "\\$1")).test(cls)) return true
@@ -84,6 +99,16 @@ Item {
   function isAdded(windowClass) {
     var cls = String(windowClass || "").toLowerCase()
     return extraApps.some(function(app) { return app.toLowerCase() === cls })
+  }
+
+  function isBuiltInEnabled(pattern) {
+    return disabledApps.indexOf(pattern) === -1
+  }
+
+  function setBuiltInEnabled(pattern, enabled) {
+    var others = disabledApps.filter(function(p) { return p !== pattern })
+    disabledApps = enabled ? others : others.concat([pattern])
+    save()
   }
 
   function addApp(windowClass) {
@@ -104,15 +129,22 @@ Item {
     mkdir.running = true
   }
 
-  function parseApps(text) {
+  function stringList(value) {
+    return Array.isArray(value)
+      ? value.filter(function(item) { return typeof item === "string" && item.trim() !== "" })
+      : []
+  }
+
+  // apps.json: { "apps": [window classes to add], "disabled": [built-in patterns to skip] }
+  function loadApps(text) {
+    var data = {}
     try {
-      var data = JSON.parse(text)
-      var apps = Array.isArray(data) ? data : (data && Array.isArray(data.apps) ? data.apps : [])
-      return apps.filter(function(app) { return typeof app === "string" && app.trim() !== "" })
+      data = JSON.parse(text) || {}
     } catch (e) {
       console.warn("hypr-passthrough: ignoring unreadable " + root.appsPath)
-      return []
     }
+    root.extraApps = stringList(Array.isArray(data) ? data : data.apps)
+    root.disabledApps = stringList(data.disabled)
   }
 
   FileView {
@@ -122,7 +154,7 @@ Item {
     watchChanges: true
     onFileChanged: reload()
     onLoaded: {
-      root.extraApps = root.parseApps(text())
+      root.loadApps(text())
       root.sync()
     }
     // Create the file, so it is watched and hand edits apply straight away.
@@ -134,7 +166,7 @@ Item {
   Process {
     id: mkdir
     command: ["mkdir", "-p", root.appsDir]
-    onExited: appsFile.setText(JSON.stringify({ apps: root.extraApps }, null, 2) + "\n")
+    onExited: appsFile.setText(JSON.stringify({ apps: root.extraApps, disabled: root.disabledApps }, null, 2) + "\n")
   }
 
   Process {
