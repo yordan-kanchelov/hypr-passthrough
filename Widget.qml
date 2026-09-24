@@ -1,4 +1,5 @@
 import QtQuick
+import QtQuick.Controls as QQC
 import Quickshell.Wayland
 import qs.Commons
 import qs.Ui
@@ -91,206 +92,213 @@ BarWidget {
     contentWidth: popup.fittedContentWidth(Style.space(300))
     contentHeight: popup.fittedContentHeight(column.implicitHeight, Style.space(520))
 
-    Column {
-      id: column
+    // One scroll area for the whole menu; the card is capped to the screen.
+    QQC.ScrollView {
+      id: scroller
       anchors.fill: parent
-      spacing: Style.space(8)
+      clip: true
+      QQC.ScrollBar.horizontal.policy: QQC.ScrollBar.AlwaysOff
+      QQC.ScrollBar.vertical.policy: column.implicitHeight > height ? QQC.ScrollBar.AsNeeded : QQC.ScrollBar.AlwaysOff
 
-      Text {
-        text: "hypr-passthrough"
-        color: root.textColor
-        font.family: root.fontFamily
-        font.pixelSize: Style.font.body
-        font.bold: true
+      Binding {
+        target: scroller.contentItem
+        property: "interactive"
+        value: column.implicitHeight > scroller.height
       }
 
-      Text {
-        width: parent.width
-        wrapMode: Text.WordWrap
-        text: root.active
-          ? "On: shortcuts go to " + (root.service ? root.service.activeClass : "the app") + ". Super + Shift + Esc pauses."
-          : "Turns on when a listed app is fullscreen and focused."
-        color: root.mutedColor
-        font.family: root.fontFamily
-        font.pixelSize: Style.font.caption
-      }
+      Column {
+        id: column
+        width: scroller.availableWidth
+        spacing: Style.space(8)
 
-      Text {
-        visible: !root.service
-        width: parent.width
-        wrapMode: Text.WordWrap
-        text: "The passthrough service isn't running. Re-enable the plugin."
-        color: Color.urgent
-        font.family: root.fontFamily
-        font.pixelSize: Style.font.caption
-      }
+        Text {
+          text: "hypr-passthrough"
+          color: root.textColor
+          font.family: root.fontFamily
+          font.pixelSize: Style.font.body
+          font.bold: true
+        }
 
-      PanelSectionHeader {
-        width: parent.width
-        foreground: root.textColor
-        fontFamily: root.fontFamily
-        text: "Open apps"
-      }
+        Text {
+          width: parent.width
+          wrapMode: Text.WordWrap
+          text: root.active
+            ? "On: shortcuts go to " + (root.service ? root.service.activeClass : "the app") + ". Super + Shift + Esc pauses."
+            : "Turns on when a listed app is fullscreen and focused."
+          color: root.mutedColor
+          font.family: root.fontFamily
+          font.pixelSize: Style.font.caption
+        }
 
-      Text {
-        visible: root.openApps.length === 0
-        text: "No open windows."
-        color: root.mutedColor
-        font.family: root.fontFamily
-        font.pixelSize: Style.font.caption
-        font.italic: true
-      }
+        Text {
+          visible: !root.service
+          width: parent.width
+          wrapMode: Text.WordWrap
+          text: "The passthrough service isn't running. Re-enable the plugin."
+          color: Color.urgent
+          font.family: root.fontFamily
+          font.pixelSize: Style.font.caption
+        }
 
-      ListView {
-        id: openAppsList
-        width: parent.width
-        height: Math.min(contentHeight, Style.space(220))
-        visible: root.openApps.length > 0
-        clip: true
-        interactive: contentHeight > height
-        spacing: Style.space(4)
-        model: root.openApps
+        PanelSectionHeader {
+          width: parent.width
+          foreground: root.textColor
+          fontFamily: root.fontFamily
+          text: "Open apps"
+        }
 
-        delegate: Item {
-          id: appRow
-          required property var modelData
-          readonly property bool listed: root.service ? root.service.isListed(modelData.appClass) : false
-          readonly property bool focused: modelData.appClass.toLowerCase() === root.targetClass.toLowerCase()
-          width: openAppsList.width
-          implicitHeight: addButton.implicitHeight
-          height: implicitHeight
+        Text {
+          visible: root.openApps.length === 0
+          text: "No open windows."
+          color: root.mutedColor
+          font.family: root.fontFamily
+          font.pixelSize: Style.font.caption
+          font.italic: true
+        }
 
-          Text {
-            anchors.left: parent.left
-            anchors.right: addButton.left
-            anchors.rightMargin: Style.space(8)
-            anchors.verticalCenter: parent.verticalCenter
-            elide: Text.ElideRight
-            textFormat: Text.PlainText
-            text: appRow.modelData.appClass
-              + (appRow.modelData.count > 1 ? "  \u00d7" + appRow.modelData.count : "")
-              + (appRow.focused ? "  (focused)" : "")
-            color: root.textColor
-            font.family: root.fontFamily
-            font.pixelSize: Style.font.bodySmall
-            font.bold: appRow.focused
-          }
+        Repeater {
+          model: root.openApps
 
-          Button {
-            id: addButton
-            anchors.right: parent.right
-            anchors.verticalCenter: parent.verticalCenter
-            enabled: !appRow.listed
-            text: appRow.listed ? "Listed" : "Add"
-            iconText: appRow.listed ? "" : String.fromCodePoint(0xF0415)
-            fontSize: Style.font.bodySmall
-            fontFamily: root.fontFamily
-            foreground: root.textColor
-            opacity: enabled ? 1 : 0.5
-            bordered: true
-            onClicked: if (root.service) root.service.addApp(appRow.modelData.appClass)
+          delegate: Item {
+            id: appRow
+            required property var modelData
+            readonly property bool listed: root.service ? root.service.isListed(modelData.appClass) : false
+            readonly property bool focused: modelData.appClass.toLowerCase() === root.targetClass.toLowerCase()
+            width: column.width
+            implicitHeight: addButton.implicitHeight
+
+            Text {
+              anchors.left: parent.left
+              anchors.right: addButton.left
+              anchors.rightMargin: Style.space(8)
+              anchors.verticalCenter: parent.verticalCenter
+              elide: Text.ElideRight
+              textFormat: Text.PlainText
+              text: appRow.modelData.appClass
+                + (appRow.modelData.count > 1 ? "  \u00d7" + appRow.modelData.count : "")
+                + (appRow.focused ? "  (focused)" : "")
+              color: root.textColor
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.bodySmall
+              font.bold: appRow.focused
+            }
+
+            Button {
+              id: addButton
+              anchors.right: parent.right
+              anchors.verticalCenter: parent.verticalCenter
+              enabled: !appRow.listed
+              text: appRow.listed ? "Listed" : "Add"
+              iconText: appRow.listed ? "" : String.fromCodePoint(0xF0415)
+              fontSize: Style.font.bodySmall
+              fontFamily: root.fontFamily
+              foreground: root.textColor
+              opacity: enabled ? 1 : 0.5
+              bordered: true
+              onClicked: if (root.service) root.service.addApp(appRow.modelData.appClass)
+            }
           }
         }
-      }
 
-      PanelSectionHeader {
-        width: parent.width
-        foreground: root.textColor
-        fontFamily: root.fontFamily
-        text: "Your apps"
-      }
+        PanelSectionHeader {
+          width: parent.width
+          foreground: root.textColor
+          fontFamily: root.fontFamily
+          text: "Your apps"
+        }
 
-      Text {
-        visible: root.extraApps.length === 0
-        text: "None yet. Click Add next to an open app."
-        width: parent.width
-        wrapMode: Text.WordWrap
-        color: root.mutedColor
-        font.family: root.fontFamily
-        font.pixelSize: Style.font.caption
-        font.italic: true
-      }
+        Text {
+          visible: root.extraApps.length === 0
+          text: "None yet. Click Add next to an open app."
+          width: parent.width
+          wrapMode: Text.WordWrap
+          color: root.mutedColor
+          font.family: root.fontFamily
+          font.pixelSize: Style.font.caption
+          font.italic: true
+        }
 
-      Repeater {
-        model: root.extraApps
+        Repeater {
+          model: root.extraApps
 
-        delegate: Item {
-          required property var modelData
-          width: column.width
-          implicitHeight: removeButton.implicitHeight
+          delegate: Item {
+            required property var modelData
+            width: column.width
+            implicitHeight: removeButton.implicitHeight
 
-          Text {
-            anchors.left: parent.left
-            anchors.right: removeButton.left
-            anchors.rightMargin: Style.space(8)
-            anchors.verticalCenter: parent.verticalCenter
-            elide: Text.ElideRight
-            textFormat: Text.PlainText
-            text: modelData
-            color: root.textColor
-            font.family: root.fontFamily
-            font.pixelSize: Style.font.bodySmall
-          }
+            Text {
+              anchors.left: parent.left
+              anchors.right: removeButton.left
+              anchors.rightMargin: Style.space(8)
+              anchors.verticalCenter: parent.verticalCenter
+              elide: Text.ElideRight
+              textFormat: Text.PlainText
+              text: modelData
+              color: root.textColor
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.bodySmall
+            }
 
-          Button {
-            id: removeButton
-            anchors.right: parent.right
-            anchors.verticalCenter: parent.verticalCenter
-            iconText: String.fromCodePoint(0xF0156)
-            tooltipText: "Remove " + modelData
-            fontSize: Style.font.bodySmall
-            fontFamily: root.fontFamily
-            foreground: root.textColor
-            onClicked: if (root.service) root.service.removeApp(modelData)
+            Button {
+              id: removeButton
+              anchors.right: parent.right
+              anchors.verticalCenter: parent.verticalCenter
+              iconText: String.fromCodePoint(0xF0156)
+              tooltipText: "Remove " + modelData
+              fontSize: Style.font.bodySmall
+              fontFamily: root.fontFamily
+              foreground: root.textColor
+              onClicked: if (root.service) root.service.removeApp(modelData)
+            }
           }
         }
-      }
 
-      PanelSectionHeader {
-        width: parent.width
-        foreground: root.textColor
-        fontFamily: root.fontFamily
-        text: "Built in"
-      }
+        PanelSectionHeader {
+          width: parent.width
+          foreground: root.textColor
+          fontFamily: root.fontFamily
+          text: "Built in"
+        }
 
-      Text {
-        visible: root.appPatterns.length === 0
-        text: "Loading..."
-        color: root.mutedColor
-        font.family: root.fontFamily
-        font.pixelSize: Style.font.caption
-      }
+        Text {
+          visible: root.appPatterns.length === 0
+          text: "Loading..."
+          color: root.mutedColor
+          font.family: root.fontFamily
+          font.pixelSize: Style.font.caption
+        }
 
-      Repeater {
-        model: root.appPatterns
+        Repeater {
+          model: root.appPatterns
 
-        delegate: Item {
-          id: builtInRow
-          required property var modelData
-          readonly property bool enabledApp: root.service ? root.service.isBuiltInEnabled(modelData) : true
-          width: column.width
-          implicitHeight: builtInSwitch.implicitHeight
+          delegate: Item {
+            id: builtInRow
+            required property var modelData
+            readonly property bool enabledApp: root.service ? root.service.isBuiltInEnabled(modelData) : true
+            width: column.width
+            implicitHeight: builtInSwitch.implicitHeight
 
-          Text {
-            anchors.left: parent.left
-            anchors.right: builtInSwitch.left
-            anchors.rightMargin: Style.space(8)
-            anchors.verticalCenter: parent.verticalCenter
-            elide: Text.ElideRight
-            textFormat: Text.PlainText
-            text: root.patternLabel(builtInRow.modelData)
-            color: builtInRow.enabledApp ? root.textColor : root.mutedColor
-            font.family: root.fontFamily
-            font.pixelSize: Style.font.bodySmall
-          }
+            Text {
+              anchors.left: parent.left
+              anchors.right: builtInSwitch.left
+              anchors.rightMargin: Style.space(8)
+              anchors.verticalCenter: parent.verticalCenter
+              elide: Text.ElideRight
+              textFormat: Text.PlainText
+              text: root.patternLabel(builtInRow.modelData)
+              color: builtInRow.enabledApp ? root.textColor : root.mutedColor
+              font.family: root.fontFamily
+              font.pixelSize: Style.font.bodySmall
+            }
 
-          ToggleSwitch {
-            id: builtInSwitch
-            anchors.right: parent.right
-            anchors.verticalCenter: parent.verticalCenter
-            checked: builtInRow.enabledApp
-            foreground: root.textColor
-            onToggled: if (root.service) root.service.setBuiltInEnabled(builtInRow.modelData, !builtInRow.enabledApp)
+            ToggleSwitch {
+              id: builtInSwitch
+              anchors.right: parent.right
+              anchors.verticalCenter: parent.verticalCenter
+              checked: builtInRow.enabledApp
+              foreground: root.textColor
+              onToggled: if (root.service) root.service.setBuiltInEnabled(builtInRow.modelData, !builtInRow.enabledApp)
+            }
           }
         }
       }
