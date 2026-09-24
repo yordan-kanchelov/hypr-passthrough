@@ -69,8 +69,9 @@ The plugin adds an icon to the right side of your bar. It shows a keyboard while
 a highlighted remote-desktop icon while shortcuts are being passed through. Click it to
 see which apps passthrough applies to:
 
-- **Focused window**: the app that was focused when you opened the menu. Click **Add** to
-  pass shortcuts through to it as well.
+- **Open apps**: every app with an open window, whether or not it is fullscreen, with the
+  focused one first. Click **Add** to pass shortcuts through to it as well; apps already
+  covered show **Listed**.
 - **Your apps**: the apps you added. Click the cross to remove one.
 - **Built in**: the default app list.
 
