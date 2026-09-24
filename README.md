@@ -74,7 +74,8 @@ see which apps passthrough applies to:
   covered show **Listed**.
 - **Your apps**: the apps you added. Click the cross to remove one.
 - **Built in**: the default apps (RustDesk, Moonlight, Parsec, Remmina, virt-viewer, Looking
-  Glass). They are all on by default; use a switch to opt out of one.
+  Glass). They are all on by default; use a switch to opt out of one. Only the ones
+  installed on your machine, or currently open, are shown.
 
 Both lists live in `~/.config/hypr-passthrough/apps.json`:
 
