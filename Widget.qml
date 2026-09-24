@@ -1,9 +1,10 @@
 import QtQuick
+import Quickshell.Wayland
 import qs.Commons
 import qs.Ui
 
 // Bar widget for hypr-passthrough: shows whether shortcuts are being passed
-// through, lists the apps it applies to, and adds the focused window's app.
+// through, lists the apps it applies to, and adds any open app.
 BarWidget {
   id: root
   moduleName: "yordan-kanchelov.passthrough"
@@ -17,6 +18,30 @@ BarWidget {
 
   // The window focused when the popup opened; the popup itself takes focus.
   property string targetClass: ""
+
+  // Every open app, once per window class, focused app first: [{ appClass, count }]
+  readonly property var openApps: {
+    var toplevels = ToplevelManager.toplevels ? ToplevelManager.toplevels.values : []
+    var byClass = {}
+    var apps = []
+    for (var i = 0; i < toplevels.length; i++) {
+      var appClass = String(toplevels[i].appId || "")
+      if (!appClass) continue
+      var key = appClass.toLowerCase()
+      if (byClass[key]) {
+        byClass[key].count++
+      } else {
+        byClass[key] = { appClass: appClass, count: 1 }
+        apps.push(byClass[key])
+      }
+    }
+    var focused = targetClass.toLowerCase()
+    return apps.sort(function(a, b) {
+      var af = a.appClass.toLowerCase() === focused, bf = b.appClass.toLowerCase() === focused
+      if (af !== bf) return af ? -1 : 1
+      return a.appClass.toLowerCase() < b.appClass.toLowerCase() ? -1 : 1
+    })
+  }
   property bool opened: false
 
   readonly property color textColor: Color.popups.text
@@ -104,41 +129,67 @@ BarWidget {
         width: parent.width
         foreground: root.textColor
         fontFamily: root.fontFamily
-        text: "Focused window"
+        text: "Open apps"
       }
 
-      Item {
+      Text {
+        visible: root.openApps.length === 0
+        text: "No open windows."
+        color: root.mutedColor
+        font.family: root.fontFamily
+        font.pixelSize: Style.font.caption
+        font.italic: true
+      }
+
+      ListView {
+        id: openAppsList
         width: parent.width
-        implicitHeight: addButton.implicitHeight
+        height: Math.min(contentHeight, Style.space(220))
+        visible: root.openApps.length > 0
+        clip: true
+        interactive: contentHeight > height
+        spacing: Style.space(4)
+        model: root.openApps
 
-        Text {
-          anchors.left: parent.left
-          anchors.right: addButton.left
-          anchors.rightMargin: Style.space(8)
-          anchors.verticalCenter: parent.verticalCenter
-          elide: Text.ElideRight
-          textFormat: Text.PlainText
-          text: root.targetClass || "No focused window"
-          color: root.targetClass ? root.textColor : root.mutedColor
-          font.family: root.fontFamily
-          font.pixelSize: Style.font.bodySmall
-        }
+        delegate: Item {
+          id: appRow
+          required property var modelData
+          readonly property bool listed: root.service ? root.service.isListed(modelData.appClass) : false
+          readonly property bool focused: modelData.appClass.toLowerCase() === root.targetClass.toLowerCase()
+          width: openAppsList.width
+          implicitHeight: addButton.implicitHeight
+          height: implicitHeight
 
-        Button {
-          id: addButton
-          anchors.right: parent.right
-          anchors.verticalCenter: parent.verticalCenter
-          readonly property bool listed: root.service ? root.service.isListed(root.targetClass) : false
-          visible: root.targetClass !== ""
-          enabled: !listed
-          text: listed ? "Listed" : "Add"
-          iconText: listed ? "" : String.fromCodePoint(0xF0415)
-          fontSize: Style.font.bodySmall
-          fontFamily: root.fontFamily
-          foreground: root.textColor
-          opacity: enabled ? 1 : 0.5
-          bordered: true
-          onClicked: if (root.service) root.service.addApp(root.targetClass)
+          Text {
+            anchors.left: parent.left
+            anchors.right: addButton.left
+            anchors.rightMargin: Style.space(8)
+            anchors.verticalCenter: parent.verticalCenter
+            elide: Text.ElideRight
+            textFormat: Text.PlainText
+            text: appRow.modelData.appClass
+              + (appRow.modelData.count > 1 ? "  \u00d7" + appRow.modelData.count : "")
+              + (appRow.focused ? "  (focused)" : "")
+            color: root.textColor
+            font.family: root.fontFamily
+            font.pixelSize: Style.font.bodySmall
+            font.bold: appRow.focused
+          }
+
+          Button {
+            id: addButton
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            enabled: !appRow.listed
+            text: appRow.listed ? "Listed" : "Add"
+            iconText: appRow.listed ? "" : String.fromCodePoint(0xF0415)
+            fontSize: Style.font.bodySmall
+            fontFamily: root.fontFamily
+            foreground: root.textColor
+            opacity: enabled ? 1 : 0.5
+            bordered: true
+            onClicked: if (root.service) root.service.addApp(appRow.modelData.appClass)
+          }
         }
       }
 
@@ -151,7 +202,7 @@ BarWidget {
 
       Text {
         visible: root.extraApps.length === 0
-        text: "None yet. Focus an app, open this menu and click Add."
+        text: "None yet. Click Add next to an open app."
         width: parent.width
         wrapMode: Text.WordWrap
         color: root.mutedColor
