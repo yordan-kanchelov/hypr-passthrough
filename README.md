@@ -16,7 +16,12 @@ No other dependencies: the plugin only uses `hyprctl`, which ships with Hyprland
 
 ```bash
 omarchy plugin add https://github.com/yordan-kanchelov/hypr-passthrough.git --enable
+omarchy restart shell
 ```
+
+Restart the shell after installing and after each `omarchy plugin update
+yordan-kanchelov.passthrough`: the shell caches plugin code, so new files and changes
+only load on a fresh start.
 
 Use `--enable` rather than a separate `omarchy plugin enable` right after `add`: the shell
 rescans plugins in the background, so an immediate `enable` can fail with "plugin is not
@@ -57,6 +62,22 @@ To remove it, delete that `require` line and `~/.config/hypr/passthrough.lua`.
 bindings work again (for example, `SUPER + F` to leave fullscreen). Press it again to resume.
 
 If you ever get stuck: `hyprctl dispatch 'hl.dsp.submap("reset")'`
+
+## Bar widget
+
+The plugin adds an icon to the right side of your bar. It shows a keyboard while idle and
+a highlighted remote-desktop icon while shortcuts are being passed through. Click it to
+see which apps passthrough applies to:
+
+- **Focused window**: the app that was focused when you opened the menu. Click **Add** to
+  pass shortcuts through to it as well.
+- **Your apps**: the apps you added. Click the cross to remove one.
+- **Built in**: the default app list.
+
+Added apps are exact window classes (case-insensitive), saved in
+`~/.config/hypr-passthrough/apps.json`. You can also edit that file by hand; changes
+apply straight away. While the plugin is enabled, they apply on top of a Lua install's
+`apps` too. Move the icon with `omarchy bar move yordan-kanchelov.passthrough --section left`.
 
 ## Options
 
