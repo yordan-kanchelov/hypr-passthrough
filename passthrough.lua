@@ -111,10 +111,10 @@ local function toggle()
 
   if paused[window.address] then
     paused[window.address] = nil
-    notify("Shortcut passthrough on")
+    notify("hypr-passthrough on")
   else
     paused[window.address] = true
-    notify("Shortcut passthrough paused")
+    notify("hypr-passthrough paused")
   end
 
   sync()
@@ -142,7 +142,7 @@ function M.setup(options)
 
   -- The toggle is bound inside the submap, which also registers the submap
   -- (Hyprland will not enter one without bindings), and again globally.
-  local description = { description = "Toggle shortcut passthrough" }
+  local description = { description = "Toggle hypr-passthrough" }
   hl.define_submap(config.submap, function()
     table.insert(toggle_binds, hl.bind(config.toggle_key, toggle, description))
   end)

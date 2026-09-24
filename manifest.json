@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "id": "yordan-kanchelov.passthrough",
-  "name": "Shortcut passthrough",
-  "version": "1.1.0",
+  "name": "hypr-passthrough",
+  "version": "1.2.0",
   "author": "Yordan Kanchelov",
   "description": "Send SUPER shortcuts to fullscreen remote-desktop, streaming and VM windows (RustDesk, Moonlight, Parsec, virt-viewer...), and add your own apps from the bar",
   "license": "MIT",
@@ -15,7 +15,7 @@
     "barWidget": "Widget.qml"
   },
   "barWidget": {
-    "displayName": "Shortcut passthrough",
+    "displayName": "hypr-passthrough",
     "description": "Shows when shortcuts pass through, and lists or adds passthrough apps",
     "category": "Compositor",
     "allowMultiple": false,

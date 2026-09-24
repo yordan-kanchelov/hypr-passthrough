@@ -78,7 +78,7 @@ BarWidget {
     active: root.active
     tooltipText: root.opened ? "" : (root.active
       ? "Shortcuts go to " + (root.service ? root.service.activeClass : "the app")
-      : "Shortcut passthrough")
+      : "hypr-passthrough")
     onPressed: function(b) { root.toggle() }
   }
 
@@ -97,7 +97,7 @@ BarWidget {
       spacing: Style.space(8)
 
       Text {
-        text: "Shortcut passthrough"
+        text: "hypr-passthrough"
         color: root.textColor
         font.family: root.fontFamily
         font.pixelSize: Style.font.body
