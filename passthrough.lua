@@ -97,7 +97,7 @@ end
 
 local function toggle()
   local window = hl.get_active_window()
-  if not matches(window) then
+  if not matches(window) or window.address == nil then
     return
   end
 
@@ -138,9 +138,13 @@ function M.setup(options)
 
   hl.on("window.active", sync)
   hl.on("window.fullscreen", sync)
-  hl.on("window.close", sync)
-  hl.on("window.destroy", function(window)
-    paused[window.address] = nil
+  -- Forget paused state here rather than on window.destroy: by then the window
+  -- has expired and its address is nil.
+  hl.on("window.close", function(window)
+    if window and window.address then
+      paused[window.address] = nil
+    end
+    sync()
   end)
   hl.on("config.reloaded", sync)
 
