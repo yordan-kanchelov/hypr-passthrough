@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "id": "yordan-kanchelov.passthrough",
+  "name": "Shortcut passthrough",
+  "version": "1.0.0",
+  "author": "Yordan Kanchelov",
+  "description": "Send SUPER shortcuts to fullscreen remote-desktop, streaming and VM windows (RustDesk, Moonlight, Parsec, virt-viewer...)",
+  "kinds": [
+    "service"
+  ],
+  "entryPoints": {
+    "service": "Service.qml"
+  }
+}

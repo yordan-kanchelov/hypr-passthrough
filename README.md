@@ -11,6 +11,20 @@ Works with Hyprland's Lua config (0.55+), on [Omarchy](https://omarchy.org) or p
 
 ## Install
 
+### As an Omarchy plugin
+
+```bash
+omarchy plugin add https://github.com/yordan-kanchelov/hypr-passthrough.git
+omarchy plugin enable yordan-kanchelov.passthrough
+```
+
+The plugin loads `passthrough.lua` into Hyprland with the default options, reloads it
+after every Hyprland config reload, and unloads it when you disable the plugin. To change
+the options, use the Lua install below instead. If both are set up, your
+`hyprland.lua` copy wins and the plugin leaves it alone.
+
+### As a Lua module (any Hyprland with Lua config)
+
 ```bash
 curl -fsSL -o ~/.config/hypr/passthrough.lua \
   https://raw.githubusercontent.com/yordan-kanchelov/hypr-passthrough/main/passthrough.lua
@@ -48,8 +62,8 @@ require("hypr.passthrough").setup({
   -- "fullscreen" | "maximized" (fullscreen or maximized) | "focused" (always)
   when = "fullscreen",
 
-  -- Pause/resume key. Set to false to disable (then only leaving the window
-  -- or fullscreen through the app itself restores your bindings).
+  -- Pause/resume key. Required: it is your way out, and Hyprland will not
+  -- enter a submap that has no bindings.
   toggle_key = "SUPER + SHIFT + ESCAPE",
 
   submap = "passthrough",
@@ -65,6 +79,9 @@ Find a window's class with `hyprctl activewindow -j | jq -r .class`.
   modes, etc.) are left alone.
 - Hyprland only stops handling the keys. The app still has to forward them: in RustDesk,
   use the *Map* or *Translate* keyboard mode so `SUPER` arrives as `Cmd` on a Mac.
+- `hyprctl eval 'hypr_passthrough.teardown()'` removes it without a config reload. It is
+  written to avoid a Hyprland 0.56 bug where touching an expired keybind handle crashes
+  the compositor.
 
 ## License
 
