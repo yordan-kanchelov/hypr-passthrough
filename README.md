@@ -158,6 +158,9 @@ away.
 - `apps`: extra window classes to pass through (exact match, case-insensitive).
 - `disabled`: built-in patterns to turn off, written exactly as in the `apps` default
   under [Options](#options).
+- `when` (optional): `"fullscreen"` (default), `"maximized"` or `"focused"`, as in
+  [Options](#options). Use `"focused"` for apps you keep windowed, so you can still
+  click the bar to switch workspaces.
 
 These apply on top of a Lua module's `apps` too, while the Omarchy plugin is enabled.
 
@@ -183,6 +186,11 @@ require("hypr.passthrough").setup({
 
   submap = "passthrough",
   notify = true,
+
+  -- Optional function(window) -> boolean, checked before `apps`, for windows
+  -- a class pattern can't pick out (e.g. apps that set no window class):
+  --   match = function(w) return w.class == "" and w.title:find("^iShareScreen") ~= nil end
+  match = nil,
 })
 ```
 

@@ -41,6 +41,11 @@ M.defaults = {
 
   -- Show a short notification when passthrough is paused or resumed.
   notify = true,
+
+  -- Optional function(window) -> boolean, checked before `apps`. Use it for
+  -- windows a class pattern can't pick out, e.g. apps that set no class:
+  --   match = function(w) return w.class == "" and w.title:find("^iShareScreen") ~= nil end
+  match = nil,
 }
 
 local config
@@ -52,7 +57,15 @@ local extra_classes = {}
 local disabled_patterns = {}
 
 local function matches(window)
-  if window == nil or window.class == nil then
+  if window == nil then
+    return false
+  end
+
+  if config.match and config.match(window) then
+    return true
+  end
+
+  if window.class == nil then
     return false
   end
 
@@ -181,6 +194,15 @@ function M.set_extra_apps(classes)
   end
 
   if config then
+    sync()
+  end
+end
+
+-- Override `when` at runtime (e.g. from the Omarchy plugin's apps.json).
+-- Unknown values are ignored.
+function M.set_when(mode)
+  if config and (mode == "fullscreen" or mode == "maximized" or mode == "focused") then
+    config.when = mode
     sync()
   end
 end

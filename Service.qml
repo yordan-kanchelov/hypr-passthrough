@@ -26,6 +26,8 @@ Item {
   property var extraApps: []
   // Built-in app patterns switched off from the bar widget, saved in apps.json.
   property var disabledApps: []
+  // When to pass shortcuts through, from apps.json; "" keeps the module's own.
+  property string whenMode: ""
   // Lua patterns configured in the module (the built-in list unless
   // hyprland.lua passes its own `apps`).
   property var appPatterns: []
@@ -46,6 +48,7 @@ Item {
     + extraApps.map(luaString).join(", ") + "}) end "
     + "if hypr_passthrough and hypr_passthrough.set_disabled_apps then hypr_passthrough.set_disabled_apps({"
     + disabledApps.map(luaString).join(", ") + "}) end"
+    + (whenMode ? " if hypr_passthrough and hypr_passthrough.set_when then hypr_passthrough.set_when(" + luaString(whenMode) + ") end" : "")
 
   // Tags the copy this service instance loads. A shell restart starts the new
   // instance before the old one's detached unload runs, so each instance only
@@ -141,7 +144,8 @@ Item {
       : []
   }
 
-  // apps.json: { "apps": [window classes to add], "disabled": [built-in patterns to skip] }
+  // apps.json: { "apps": [window classes to add], "disabled": [built-in patterns to skip],
+  //              "when": "fullscreen" | "maximized" | "focused" (optional) }
   function loadApps(text) {
     var data = {}
     try {
@@ -151,6 +155,7 @@ Item {
     }
     root.extraApps = stringList(Array.isArray(data) ? data : data.apps)
     root.disabledApps = stringList(data.disabled)
+    root.whenMode = ["fullscreen", "maximized", "focused"].indexOf(data.when) !== -1 ? data.when : ""
   }
 
   FileView {
@@ -172,7 +177,11 @@ Item {
   Process {
     id: mkdir
     command: ["mkdir", "-p", root.appsDir]
-    onExited: appsFile.setText(JSON.stringify({ apps: root.extraApps, disabled: root.disabledApps }, null, 2) + "\n")
+    onExited: {
+      var data = { apps: root.extraApps, disabled: root.disabledApps }
+      if (root.whenMode) data.when = root.whenMode
+      appsFile.setText(JSON.stringify(data, null, 2) + "\n")
+    }
   }
 
   Process {
